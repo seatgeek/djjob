@@ -1,0 +1,30 @@
+h1. DJJob
+
+DJJob allows PHP web applications to process long-running tasks asynchronously. It is a PHP port of delayed_job (originally extracted from Shopify), which has been used in production at SeatGeek since April 2010.
+
+Like delayed_job, DJJob uses a `jobs` table for persisting and tracking pending, in-progress, and failed jobs.
+
+h2. Setup
+
+bc.. mysql db < jobs.sql
+
+
+The `jobs` table structure looks like:
+
+bc.. CREATE TABLE `jobs` (
+`id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+`handler` TEXT NOT NULL,
+`queue` VARCHAR(255) NOT NULL DEFAULT 'default',
+`run_at` DATETIME NULL,
+`locked_at` DATETIME NULL,
+`locked_by` VARCHAR(255) NULL,
+`failed_at` DATETIME NULL,
+`error` TEXT NULL,
+`created_at` DATETIME NOT NULL
+) ENGINE = INNODB;
+
+
+h2. Usage
+
+Jobs are PHP objects that respond to a method `perform`.
+
