@@ -1,9 +1,10 @@
 h1. DJJob
 
-DJJob allows PHP web applications to process long-running tasks asynchronously. It is a PHP port of "delayed_job":http://github.com/tobi/delayed_job (developed at Shopify), which has been used in production at SeatGeek since April 2010.
+p. DJJob allows PHP web applications to process long-running tasks asynchronously. It is a PHP port of "delayed_job":http://github.com/tobi/delayed_job (developed at Shopify), which has been used in production at SeatGeek since April 2010.
 
-Like delayed_job, DJJob uses a @jobs@ table for persisting and tracking pending, in-progress, and failed jobs.
+p. Like delayed_job, DJJob uses a @jobs@ table for persisting and tracking pending, in-progress, and failed jobs.
 
+p. Currently DJJob relies on Propel, but the dependency is weak and should be easy to eliminate.
 
 h2. Setup
 
@@ -26,7 +27,7 @@ bc. CREATE TABLE `jobs` (
 
 h2. Usage
 
-Jobs are PHP objects that respond to a method `perform`. Jobs are serialized and stored in the database.
+p. Jobs are PHP objects that respond to a method @perform@. Jobs are serialized and stored in the database.
 
 bc.. class HelloWorldJob {
     public function __construct($name) {
@@ -39,7 +40,7 @@ bc.. class HelloWorldJob {
 
 DJJob::enqueue(new HelloWorldJob("delayed_job"));
 
-p. Unlike delayed_job, DJJob does not have the concept of task priority (not yet at least). Instead, it supports multiple queues. By default jobs are placed on the "default" queue. You can specifiy an alternative queue like:
+p. Unlike delayed_job, DJJob does not have the concept of task priority (not yet at least). Instead, it supports multiple queues. By default, jobs are placed on the "default" queue. You can specifiy an alternative queue like:
 
 bc. DJJob::enqueue(new SignupEmailJob("dev@seatgeek.com"), "email");
 
