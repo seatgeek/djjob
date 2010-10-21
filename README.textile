@@ -37,11 +37,46 @@ bc.. class HelloWorldJob {
     }
 }
 
-DJJob::enqueue(new HelloWorldJob("Eric"));
+DJJob::enqueue(new HelloWorldJob("delayed_job"));
+
 
 h2. Running the jobs
 
-p. This is sort of up to you:
+p. Running a worker is as simple as:
 
 bc. $worker = new DJWorker($options);
 $worker->start();
+
+p. Initializing your environment, connecting to the database, etc. is up to you. We use symfony's task system to run workers, here's an example of our jobs:worker task:
+
+bc.. class jobsWorkerTask extends sfPropelBaseTask {
+  protected function configure() {
+    $this->namespace        = 'jobs';
+    $this->name             = 'worker';
+    $this->briefDescription = '';
+    $this->detailedDescription = <<<EOF
+The [jobs:worker|INFO] task runs jobs created by the DJJob system.
+Call it with:
+
+  [php symfony jobs:worker|INFO]
+EOF;
+    $this->addArgument('application', sfCommandArgument::OPTIONAL, 'The application name', 'customer');
+    // add other arguments here
+    $this->addOption('env', null, sfCommandOption::PARAMETER_REQUIRED, 'The environment', 'dev');
+    $this->addOption('connection', null, sfCommandOption::PARAMETER_REQUIRED, 'The connection name', 'delete_enabled');
+    $this->addOption('queue', null, sfCommandOption::PARAMETER_REQUIRED, 'The queue to pull jobs from', 'default');
+    $this->addOption('count', null, sfCommandOption::PARAMETER_REQUIRED, 'The number of jobs to run before exiting (0 for unlimited)', 0);
+    $this->addOption('sleep', null, sfCommandOption::PARAMETER_REQUIRED, 'Amount of time to sleep between attempts to lock an item on the job queue', 5);
+}
+
+  protected function execute($arguments = array(), $options = array()) {
+    // Database initialization
+    $databaseManager = new sfDatabaseManager($this->configuration);
+    $connection = Propel::getConnection($options['connection'] ? $options['connection'] : '');
+
+    $worker = new DJWorker($options);
+    $worker->start();
+  }
+}
+
+p. The worker will exit if the database has any connectivity problems. We use "god":http://god.rubyforge.org/ to manage our workers, including restarting them when they exit for any reason.
