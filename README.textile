@@ -39,7 +39,29 @@ bc.. class HelloWorldJob {
 
 DJJob::enqueue(new HelloWorldJob("delayed_job"));
 
-p. 
+p. Unlike delayed_job, DJJob does not have the concept of task priority (not yet at least). Instead, it supports multiple queues. By default jobs are placed on the "default" queue. You can specifiy an alternative queue like:
+
+bc. DJJob::enqueue(new SignupEmailJob("dev@seatgeek.com"), "email");
+
+p. At SeatGeek, we run an email-specific queue. Emails have a @sendLater@ method which places a job on the @email@ queue. Here's a simplified version of our base @Email@ class:
+
+bc.. class Email {
+    public function __construct($recipient) {
+        $this->recipient = $recipient;
+    }
+    public function send() {
+        ...do some expensive work to build the email: geolocation, etc..
+        ...use mail api to send this email
+    }
+    public function perform() {
+        $this->send();
+    }
+    public function sendLater() {
+        DJJob::enqueue($this, "email");
+    }
+}
+
+p. Because @Email@ has a @perform@ method, all instances of the email class are also jobs.
 
 h2. Running the jobs
 
@@ -62,12 +84,11 @@ Call it with:
   [php symfony jobs:worker|INFO]
 EOF;
     $this->addArgument('application', sfCommandArgument::OPTIONAL, 'The application name', 'customer');
-    // add other arguments here
     $this->addOption('env', null, sfCommandOption::PARAMETER_REQUIRED, 'The environment', 'dev');
-    $this->addOption('connection', null, sfCommandOption::PARAMETER_REQUIRED, 'The connection name', 'delete_enabled');
+    $this->addOption('connection', null, sfCommandOption::PARAMETER_REQUIRED, 'The connection name', 'propel');
     $this->addOption('queue', null, sfCommandOption::PARAMETER_REQUIRED, 'The queue to pull jobs from', 'default');
     $this->addOption('count', null, sfCommandOption::PARAMETER_REQUIRED, 'The number of jobs to run before exiting (0 for unlimited)', 0);
-    $this->addOption('sleep', null, sfCommandOption::PARAMETER_REQUIRED, 'Amount of time to sleep between attempts to lock an item on the job queue', 5);
+    $this->addOption('sleep', null, sfCommandOption::PARAMETER_REQUIRED, 'Seconds to sleep after finding no new jobs', 5);
 }
 
   protected function execute($arguments = array(), $options = array()) {
