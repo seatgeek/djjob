@@ -10,6 +10,7 @@ h2. Requirements
 
 * PHP5
 * Propel
+* (Optional) PCNTL library
 
 h2. Setup
 
