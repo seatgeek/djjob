@@ -26,9 +26,9 @@ bc. CREATE TABLE `jobs` (
 
 h2. Usage
 
-Jobs are PHP objects that respond to a method `perform`. Jobs are serialized to PHP's object serialization format and stored in the database.
+Jobs are PHP objects that respond to a method `perform`. Jobs are serialized and stored in the database.
 
-bc. class HelloWorldJob {
+bc.. class HelloWorldJob {
     public function __construct($name) {
         $this->name = $name;
     }
@@ -37,3 +37,11 @@ bc. class HelloWorldJob {
     }
 }
 
+DJJob::enqueue(new HelloWorldJob("Eric"));
+
+h2. Running the jobs
+
+p. This is sort of up to you:
+
+bc. $worker = new DJWorker($options);
+$worker->start();
