@@ -4,7 +4,12 @@ p. DJJob allows PHP web applications to process long-running tasks asynchronousl
 
 p. Like delayed_job, DJJob uses a @jobs@ table for persisting and tracking pending, in-progress, and failed jobs.
 
-p. Currently DJJob relies on Propel, but the dependency is weak and should be easy to eliminate.
+p. DJJob currently relies on Propel, but the dependency is weak and should be easy to eliminate.
+
+h2. Requirements
+
+* PHP5
+* Propel
 
 h2. Setup
 
