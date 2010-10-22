@@ -4,35 +4,51 @@
 # though with slightly different semantics because DJ is based on Active Record
 # and I didn't want to tie this into Propel
 
+class DJException extends Exception { }
+
+class DJRetryException extends DJException { }
+
 class DJBase {
+    
+    private static $db = null;
+    
+    protected static function getConnection() {
+        if (!self::$db) {
+            if (!defined("DJJOB_DSN")) {
+                throw new DJException("Please define a DJJOB_DSN. If you're using MySQL you'll also \
+                                       need a DJJOB_MYSQL_USERNAME and DJJOB_MYSQL_PASSWORD. See \
+                                       [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] \
+                                       for why.");
+            }
+            try {
+                // http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql
+                if (defined("DJJOB_MYSQL_USERNAME") && defined("DJJOB_MYSQL_PASSWORD")) {
+                    self::$db = new PDO(DJJOB_DSN, DJJOB_MYSQL_USERNAME, DJJOB_MYSQL_PASSWORD);
+                } else {
+                    self::$db = new PDO(DJJOB_DSN);
+                }
+            } catch (PDOException $e) {
+                throw new Exception("DJJob couldn't connect to the database. PDO said [{$e->getMessage()}]");
+            }
+        }
+        return self::$db;
+    }
+    
     protected static function runQuery($sql, $params = array()) {
-        $con = Propel::getConnection();
-        $stmt = $con->prepareStatement($sql);
-        
-        $i = 0;
-        foreach ($params as $p)
-            $stmt->set(++$i, $p);
-        
-        return $stmt->executeQuery();
+        $stmt = self::getConnection()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
     protected static function runUpdate($sql, $params = array()) {
-        $con = Propel::getConnection();
-        $stmt = $con->prepareStatement($sql);
-        
-        $i = 0;
-        foreach ($params as $p)
-            $stmt->set(++$i, $p);
-        
-        return $stmt->executeUpdate();
+        $stmt = self::getConnection()->prepare($sql);
+        return $stmt->execute($params);
     }
     
     protected static function log($mesg) {
         echo $mesg . "\n";
     }
 }
-
-class DJRetryException extends Exception { }
 
 class DJWorker extends DJBase {
     # This is a singleton-ish thing. It wouldn't really make sense to
@@ -88,7 +104,7 @@ class DJWorker extends DJBase {
         ", array($this->queue, $this->name));
         
         foreach ($rs as $r) {
-            $job = new DJJob($this->name, $rs->getInt("id"));
+            $job = new DJJob($this->name, $r["id"]);
             if ($job->acquireLock()) return $job;
         }
         
@@ -155,8 +171,7 @@ class DJJob extends DJBase {
         } catch (Exception $e) {
           
             # don't handle this exception, crash the worker and force a new DB connection
-            if(($e instanceof SQLException or $e instanceof PropelException)
-                                    && preg_match('/gone away/', $e->getMessage())) {
+            if ($e instanceof PDOException && preg_match('/^08/', PDO::errorCode())) {
                 $this->releaseLock();
                 throw $e;
             }
@@ -227,7 +242,7 @@ class DJJob extends DJBase {
             "SELECT handler FROM jobs WHERE id = ?", 
             array($this->job_id)
         );
-        while ($rs->next()) return unserialize($rs->getString("handler"));
+        foreach ($rs as $r) return unserialize($r["handler"]);
         return false;
     }
     
@@ -275,10 +290,9 @@ class DJJob extends DJBase {
             WHERE queue = ?
         ", array($queue));
         
-        $rs->next();
-        $failed = $rs->getInt("failed");
-        $locked = $rs->getInt("locked");
-        $total  = $rs->getInt("total");
+        $failed = $rs["failed"];
+        $locked = $rs["locked"];
+        $total  = $rs["total"];
         $outstanding = $total - $locked - $failed;
         
         return array(

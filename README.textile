@@ -4,19 +4,17 @@ p. DJJob allows PHP web applications to process long-running tasks asynchronousl
 
 p. Like delayed_job, DJJob uses a @jobs@ table for persisting and tracking pending, in-progress, and failed jobs.
 
-p. DJJob currently relies on Propel, but the dependency is weak and should be easy to eliminate.
-
 h2. Requirements
 
 * PHP5
-* Propel
+* PDO (Ships with PHP >= 5.1)
 * (Optional) PCNTL library
 
 h2. Setup
 
 bc. mysql db < jobs.sql
 
-The @jobs@ table structure looks like:
+p. The @jobs@ table structure looks like:
 
 bc. CREATE TABLE `jobs` (
 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -29,6 +27,14 @@ bc. CREATE TABLE `jobs` (
 `error` TEXT NULL,
 `created_at` DATETIME NOT NULL
 ) ENGINE = INNODB;
+
+p. Tell DJJob how to connect to your database:
+
+bc. define("DJJOB_DSN", "");
+define("DJJOB_MYSQL_USERNAME", "");
+define("DJJOB_MYSQL_PASSWORD", "");
+
+p. You'll only need @DJJOB_MYSQL_USERNAME@ and @DJJOB_MYSQL_PASSWORD@ if you're using mysql. Otherwise you can provide those in the connection string, see "http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql":http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql for an explanation.
 
 
 h2. Usage
@@ -109,3 +115,7 @@ EOF;
 }
 
 p. The worker will exit if the database has any connectivity problems. We use "god":http://god.rubyforge.org/ to manage our workers, including restarting them when they exit for any reason.
+
+h3. Changes
+
+* Eliminated Propel dependency by switching to PDO
