@@ -1,8 +1,6 @@
 <?php
 
 # This system is mostly a port of delayed_job: http://github.com/tobi/delayed_job
-# though with slightly different semantics because DJ is based on Active Record
-# and I didn't want to tie this into Propel
 
 class DJException extends Exception { }
 
