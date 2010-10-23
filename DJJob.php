@@ -12,20 +12,27 @@ class DJBase {
     
     private static $db = null;
     
+    private static $dsn = "";
+    private static $mysql_user = null;
+    private static $mysql_pass = null;
+    
+    public static function configure($dsn, $mysql_user = null, $mysql_pass = null) {
+        self::$dsn = $dsn;
+        self::$mysql_user = $mysql_user;
+        self::$mysql_pass = $mysql_pass;
+    }
+    
     protected static function getConnection() {
         if (!self::$db) {
-            if (!defined("DJJOB_DSN")) {
-                throw new DJException("Please define a DJJOB_DSN. If you're using MySQL you'll also \
-                                       need a DJJOB_MYSQL_USERNAME and DJJOB_MYSQL_PASSWORD. See \
-                                       [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] \
-                                       for why.");
+            if (!self::$dsn) {
+                throw new DJException("Please tell DJJob how to connect to your database by calling DJJob::configure(\$dsn, [\$mysql_user = null, [\$mysql_pass = null]]). If you're using MySQL you'll need to pass the db credentials separately. This is a PDO limitation, see [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] for an explanation.");
             }
             try {
                 // http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql
-                if (defined("DJJOB_MYSQL_USERNAME") && defined("DJJOB_MYSQL_PASSWORD")) {
-                    self::$db = new PDO(DJJOB_DSN, DJJOB_MYSQL_USERNAME, DJJOB_MYSQL_PASSWORD);
+                if (self::$mysql_user !== null) {
+                    self::$db = new PDO(self::$dsn, self::$mysql_user, self::$mysql_pass);
                 } else {
-                    self::$db = new PDO(DJJOB_DSN);
+                    self::$db = new PDO(self::$dsn);
                 }
             } catch (PDOException $e) {
                 throw new Exception("DJJob couldn't connect to the database. PDO said [{$e->getMessage()}]");
@@ -34,13 +41,13 @@ class DJBase {
         return self::$db;
     }
     
-    protected static function runQuery($sql, $params = array()) {
+    public static function runQuery($sql, $params = array()) {
         $stmt = self::getConnection()->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    protected static function runUpdate($sql, $params = array()) {
+    public static function runUpdate($sql, $params = array()) {
         $stmt = self::getConnection()->prepare($sql);
         return $stmt->execute($params);
     }
