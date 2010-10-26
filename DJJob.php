@@ -294,6 +294,7 @@ class DJJob extends DJBase {
             FROM `jobs`
             WHERE queue = ?
         ", array($queue));
+        $rs = $rs[0];
         
         $failed = $rs["failed"];
         $locked = $rs["locked"];
