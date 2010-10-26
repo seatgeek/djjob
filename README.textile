@@ -30,11 +30,9 @@ bc. CREATE TABLE `jobs` (
 
 p. Tell DJJob how to connect to your database:
 
-bc. define("DJJOB_DSN", "");
-define("DJJOB_MYSQL_USERNAME", "");
-define("DJJOB_MYSQL_PASSWORD", "");
+bc. DJJob::configure("mysql:host=127.0.0.1;dbname=djjob_test;port=3306", "root", "topsecret");
 
-p. You'll only need @DJJOB_MYSQL_USERNAME@ and @DJJOB_MYSQL_PASSWORD@ if you're using mysql. Otherwise you can provide those in the connection string, see "http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql":http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql for an explanation.
+p. If you're using mysql, you'll need to pass the database credentials separately. Otherwise, you can provide those in the connection string, see "http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql":http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql for an explanation.
 
 
 h2. Usage
