@@ -44,7 +44,7 @@ bc.. class HelloWorldJob {
         $this->name = $name;
     }
     public function perform() {
-        echo "Hello ${this->name}!\n";
+        echo "Hello {$this->name}!\n";
     }
 }
 
