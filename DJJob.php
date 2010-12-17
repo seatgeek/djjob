@@ -120,10 +120,12 @@ class DJWorker extends DJBase {
         $this->log("* [JOB] Starting worker {$this->name} on queue::{$this->queue}");
         
         $count = 0;
+        $job_count = 0;
         try {
             while ($this->count == 0 or $this->count > $count) {
                 if (function_exists("pcntl_signal_dispatch")) pcntl_signal_dispatch();
-                
+
+                $count += 1;
                 $job = $this->getNewJob($this->queue);
 
                 if (!$job) {
@@ -132,14 +134,14 @@ class DJWorker extends DJBase {
                     continue;
                 }
 
+                $job_count += 1;
                 $job->run();
-                $count += 1;
             }
         } catch (Exception $e) {
             $this->log("* [JOB] unhandled exception::\"{$e->getMessage()}\"");
         }
 
-        $this->log("* [JOB] worker shutting down after running {$count} jobs");
+        $this->log("* [JOB] worker shutting down after running {$job_count} jobs, over {$count} polling iterations");
     }
 }
 

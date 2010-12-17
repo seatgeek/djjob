@@ -37,7 +37,7 @@ DJJob::bulkEnqueue(array(
     new HelloWorldJob("github"),
 ));
 
-$worker = new DJWorker(array("count" => 3));
+$worker = new DJWorker(array("count" => 5));
 $worker->start();
 
 var_dump(DJJob::status());
