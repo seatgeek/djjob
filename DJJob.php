@@ -29,6 +29,7 @@ class DJBase {
                 // http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql
                 if (self::$mysql_user !== null) {
                     self::$db = new PDO(self::$dsn, self::$mysql_user, self::$mysql_pass);
+                    self::$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 } else {
                     self::$db = new PDO(self::$dsn);
                 }
@@ -42,7 +43,16 @@ class DJBase {
     public static function runQuery($sql, $params = array()) {
         $stmt = self::getConnection()->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $ret = array();
+        if ($stmt->rowCount()) {
+            // calling fetchAll on a result set with no rows throws a
+            // "general error" exception
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) $ret []= $r;
+        }
+        
+        $stmt->closeCursor();
+        return $ret;
     }
     
     public static function runUpdate($sql, $params = array()) {
