@@ -10,6 +10,7 @@ CREATE TABLE `jobs` (
 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 `handler` VARCHAR(2000) NOT NULL,
 `queue` VARCHAR(255) NOT NULL DEFAULT 'default',
+`attempts` INT UNSIGNED NOT NULL DEFAULT 0,
 `run_at` DATETIME NULL,
 `locked_at` DATETIME NULL,
 `locked_by` VARCHAR(255) NULL,
@@ -29,6 +30,13 @@ class HelloWorldJob {
     }
 }
 
+class FailingJob {
+    public function perform() {
+        sleep(1);
+        throw new Exception("Uh oh");
+    }
+}
+
 var_dump(DJJob::status());
 
 DJJob::enqueue(new HelloWorldJob("delayed_job"));
@@ -36,8 +44,9 @@ DJJob::bulkEnqueue(array(
     new HelloWorldJob("shopify"),
     new HelloWorldJob("github"),
 ));
+DJJob::enqueue(new FailingJob());
 
-$worker = new DJWorker(array("count" => 5));
+$worker = new DJWorker(array("count" => 7, "max_attempts" => 3));
 $worker->start();
 
 var_dump(DJJob::status());

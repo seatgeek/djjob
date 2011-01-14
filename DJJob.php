@@ -73,12 +73,15 @@ class DJWorker extends DJBase {
         $options = array_merge(array(
             "queue" => "default",
             "count" => 0,
-            "sleep" => 5
+            "sleep" => 5,
+            "max_attempts" => 5
         ), $options);
-        list($this->queue, $this->count, $this->sleep) = array($options["queue"], $options["count"], $options["sleep"]);
+        list($this->queue, $this->count, $this->sleep, $this->max_attempts) =
+            array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"]);
+
         list($hostname, $pid) = array(trim(`hostname`), getmypid());
         $this->name = "host::$hostname pid::$pid";
-        
+
         if (function_exists("pcntl_signal")) {
             pcntl_signal(SIGTERM, array($this, "handleSignal"));
             pcntl_signal(SIGINT, array($this, "handleSignal"));
@@ -119,7 +122,9 @@ class DJWorker extends DJBase {
         ", array($this->queue, $this->name));
         
         foreach ($rs as $r) {
-            $job = new DJJob($this->name, $r["id"]);
+            $job = new DJJob($this->name, $r["id"], array(
+                "max_attempts" => $this->max_attempts
+            ));
             if ($job->acquireLock()) return $job;
         }
         
@@ -157,9 +162,13 @@ class DJWorker extends DJBase {
 
 class DJJob extends DJBase {
     
-    public function __construct($worker_name, $job_id) {
+    public function __construct($worker_name, $job_id, $options = array()) {
+        $options = array_merge(array(
+            "max_attempts" => 5
+        ), $options);
         $this->worker_name = $worker_name;
         $this->job_id = $job_id;
+        $this->max_attempts = $options["max_attempts"];
     }
     
     public function run() {
@@ -236,9 +245,16 @@ class DJJob extends DJBase {
     public function finishWithError($error) {
         $this->runUpdate("
             UPDATE jobs
-            SET failed_at = NOW(), error = ?
+            SET attempts = attempts + 1,
+                failed_at = IF(attempts >= ?, NOW(), NULL),
+                error = IF(attempts >= ?, ?, NULL)
             WHERE id = ?",
-            array($error, $this->job_id)
+            array(
+                $this->max_attempts,
+                $this->max_attempts,
+                $error,
+                $this->job_id
+            )
         );
         $this->log("* [JOB] failure in job::{$this->job_id}");
         $this->releaseLock();
