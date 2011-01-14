@@ -29,10 +29,10 @@ class DJBase {
                 // http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql
                 if (self::$mysql_user !== null) {
                     self::$db = new PDO(self::$dsn, self::$mysql_user, self::$mysql_pass);
-                    self::$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 } else {
                     self::$db = new PDO(self::$dsn);
                 }
+                self::$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             } catch (PDOException $e) {
                 throw new Exception("DJJob couldn't connect to the database. PDO said [{$e->getMessage()}]");
             }
