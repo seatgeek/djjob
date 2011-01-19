@@ -14,10 +14,13 @@ class DJBase {
     private static $mysql_user = null;
     private static $mysql_pass = null;
     
-    public static function configure($dsn, $mysql_user = null, $mysql_pass = null) {
+    protected static $email = null;
+    
+    public static function configure($dsn, $mysql_user = null, $mysql_pass = null, $email = null) {
         self::$dsn = $dsn;
         self::$mysql_user = $mysql_user;
         self::$mysql_pass = $mysql_pass;
+        self::$email = $email;
     }
     
     protected static function getConnection() {
@@ -83,6 +86,9 @@ class DJWorker extends DJBase {
             pcntl_signal(SIGTERM, array($this, "handleSignal"));
             pcntl_signal(SIGINT, array($this, "handleSignal"));
         }
+
+        set_error_handler(array($this, 'error_handler'));
+        register_shutdown_function('restore_error_handler');
     }
     
     public function handleSignal($signo) {
@@ -148,10 +154,36 @@ class DJWorker extends DJBase {
                 $job->run();
             }
         } catch (Exception $e) {
-            $this->log("* [JOB] unhandled exception::\"{$e->getMessage()}\"");
+            $error_sbj = sprintf('* [JOB] unhandled exception::"%s"', $e->getMessage());
+            $this->log($error_sbj);
+            mail(self::$email, $error_sbj, $e->getTraceAsString());
         }
 
         $this->log("* [JOB] worker shutting down after running {$job_count} jobs, over {$count} polling iterations");
+    }
+    
+    public function error_handler ($errno, $errstr, $errfile = null, $errline = null, $errcontext = null) {
+        if (!(error_reporting() & $errno)) return;
+        echo 'caught ';
+        echo $errno;
+
+        switch ($errno) {
+            case 8:
+                $msg = array();
+                $msg[] = sprintf('%s :: Line %d', $errfile, $errline);
+                $msg[] = implode("\n", $errcontext);
+
+                mail(self::$email, sprintf('* [JOB] fatal error::"[%d] %s"', $errno, $errstr), implode("\n", $msg));
+
+                exit(1);
+                break;
+
+            default:
+                // noop
+                break;
+        }
+
+        return true;
     }
 }
 
@@ -240,7 +272,11 @@ class DJJob extends DJBase {
             WHERE id = ?",
             array($error, $this->job_id)
         );
-        $this->log("* [JOB] failure in job::{$this->job_id}");
+
+        $error_sbj = sprintf("* [JOB] failure in job::%d", $this->job_id);
+        $this->log($error_sbj);
+        mail(self::$email, $error_sbj, $error);
+
         $this->releaseLock();
     }
     
