@@ -11,24 +11,25 @@ class DJBase {
     private static $db = null;
     
     private static $dsn = "";
-    private static $mysql_user = null;
-    private static $mysql_pass = null;
+    private static $options = array(
+      "mysql_user" => null,
+      "mysql_pass" => null,
+    );
     
-    public static function configure($dsn, $mysql_user = null, $mysql_pass = null) {
+    public static function configure($dsn, $options = array()) {
         self::$dsn = $dsn;
-        self::$mysql_user = $mysql_user;
-        self::$mysql_pass = $mysql_pass;
+        self::$options = array_merge(self::$options, $options);
     }
     
     protected static function getConnection() {
         if (!self::$db) {
             if (!self::$dsn) {
-                throw new DJException("Please tell DJJob how to connect to your database by calling DJJob::configure(\$dsn, [\$mysql_user = null, [\$mysql_pass = null]]). If you're using MySQL you'll need to pass the db credentials separately. This is a PDO limitation, see [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] for an explanation.");
+                throw new DJException("Please tell DJJob how to connect to your database by calling DJJob::configure(\$dsn, [\$options = array()]). If you're using MySQL you'll need to pass the db credentials as separate 'mysql_user' and 'mysql_pass' options. This is a PDO limitation, see [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] for an explanation.");
             }
             try {
                 // http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql
-                if (self::$mysql_user !== null) {
-                    self::$db = new PDO(self::$dsn, self::$mysql_user, self::$mysql_pass);
+                if (self::$options["mysql_user"] !== null) {
+                    self::$db = new PDO(self::$dsn, self::$options["mysql_user"], self::$options["mysql_pass"]);
                 } else {
                     self::$db = new PDO(self::$dsn);
                 }
@@ -69,7 +70,7 @@ class DJWorker extends DJBase {
     # This is a singleton-ish thing. It wouldn't really make sense to
     # instantiate more than one in a single request (or commandline task)
     
-    public function __construct($options) {
+    public function __construct($options = array()) {
         $options = array_merge(array(
             "queue" => "default",
             "count" => 0,

@@ -2,20 +2,23 @@
 
 require dirname(__FILE__) . "/../DJJob.php";
 
-DJJob::configure("mysql:host=127.0.0.1;dbname=djjob_test", "root", "");
+DJJob::configure("mysql:host=127.0.0.1;dbname=djjob", array(
+  "mysql_user" => "djjob",
+  "mysql_pass" => "djjob",
+));
 
 DJJob::runQuery("
 DROP TABLE IF EXISTS `jobs`;
 CREATE TABLE `jobs` (
 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-`handler` VARCHAR(2000) NOT NULL,
+`handler` VARCHAR(255) NOT NULL,
 `queue` VARCHAR(255) NOT NULL DEFAULT 'default',
 `attempts` INT UNSIGNED NOT NULL DEFAULT 0,
 `run_at` DATETIME NULL,
 `locked_at` DATETIME NULL,
 `locked_by` VARCHAR(255) NULL,
 `failed_at` DATETIME NULL,
-`error` VARCHAR(2000) NULL,
+`error` VARCHAR(255) NULL,
 `created_at` DATETIME NOT NULL
 ) ENGINE = MEMORY;
 ");
