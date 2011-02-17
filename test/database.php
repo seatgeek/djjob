@@ -3,8 +3,8 @@
 require dirname(__FILE__) . "/../DJJob.php";
 
 DJJob::configure("mysql:host=127.0.0.1;dbname=djjob", array(
-  "mysql_user" => "djjob",
-  "mysql_pass" => "djjob",
+  "mysql_user" => "root",
+  "mysql_pass" => "",
 ));
 
 DJJob::runQuery("
@@ -49,7 +49,7 @@ DJJob::bulkEnqueue(array(
 ));
 DJJob::enqueue(new FailingJob());
 
-$worker = new DJWorker(array("count" => 7, "max_attempts" => 3));
+$worker = new DJWorker(array("count" => 2, "max_attempts" => 2, "sleep" => 10));
 $worker->start();
 
 var_dump(DJJob::status());

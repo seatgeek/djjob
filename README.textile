@@ -116,4 +116,5 @@ p. The worker will exit if the database has any connectivity problems. We use "g
 
 h3. Changes
 
+* Change DJJob::configure to take an options array
 * Eliminated Propel dependency by switching to PDO
