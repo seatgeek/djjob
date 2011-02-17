@@ -22,7 +22,7 @@ class DJBase {
     }
     
     protected static function getConnection() {
-        if (!self::$db) {
+        if (self::$db === null) {
             if (!self::$dsn) {
                 throw new DJException("Please tell DJJob how to connect to your database by calling DJJob::configure(\$dsn, [\$options = array()]). If you're using MySQL you'll need to pass the db credentials as separate 'mysql_user' and 'mysql_pass' options. This is a PDO limitation, see [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] for an explanation.");
             }
@@ -138,7 +138,7 @@ class DJWorker extends DJBase {
         $count = 0;
         $job_count = 0;
         try {
-            while ($this->count == 0 or $this->count > $count) {
+            while ($this->count == 0 || $count < $this->count) {
                 if (function_exists("pcntl_signal_dispatch")) pcntl_signal_dispatch();
 
                 $count += 1;
@@ -190,18 +190,12 @@ class DJJob extends DJBase {
             return true;
             
         } catch (DJRetryException $e) {
-          
+            
             # signal that this job should be retried later
             $this->retryLater();
             return false;
             
         } catch (Exception $e) {
-          
-            # don't handle this exception, crash the worker and force a new DB connection
-            if ($e instanceof PDOException && preg_match('/^08/', PDO::errorCode())) {
-                $this->releaseLock();
-                throw $e;
-            }
             
             $this->finishWithError($e->getMessage());
             return false;
