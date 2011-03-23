@@ -58,7 +58,8 @@ class DJBase {
     
     public static function runUpdate($sql, $params = array()) {
         $stmt = self::getConnection()->prepare($sql);
-        return $stmt->execute($params);
+        $stmt->execute($params);
+        return $stmt->rowCount();
     }
     
     protected static function log($mesg) {
