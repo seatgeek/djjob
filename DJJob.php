@@ -118,10 +118,12 @@ class DJWorker extends DJBase {
             FROM   jobs
             WHERE  queue = ?
             AND    (run_at IS NULL OR NOW() >= run_at)
-            AND    (locked_at IS NULL OR locked_by = ?) AND failed_at IS NULL
+            AND    (locked_at IS NULL OR locked_by = ?)
+            AND    failed_at IS NULL
+            AND    attempts < ?
             ORDER BY RAND()
             LIMIT  5
-        ", array($this->queue, $this->name));
+        ", array($this->queue, $this->name, $this->options["max_attempts"]));
         
         foreach ($rs as $r) {
             $job = new DJJob($this->name, $r["id"], array(
@@ -259,7 +261,8 @@ class DJJob extends DJBase {
     public function retryLater() {
         $this->runUpdate("
             UPDATE jobs
-            SET run_at = DATE_ADD(NOW(), INTERVAL 2 HOUR)
+            SET run_at = DATE_ADD(NOW(), INTERVAL 2 HOUR),
+                attempts = attempts + 1
             WHERE id = ?",
             array($this->job_id)
         );
