@@ -123,7 +123,7 @@ class DJWorker extends DJBase {
             AND    attempts < ?
             ORDER BY RAND()
             LIMIT  5
-        ", array($this->queue, $this->name, $this->options["max_attempts"]));
+        ", array($this->queue, $this->name, $this->max_attempts));
         
         foreach ($rs as $r) {
             $job = new DJJob($this->name, $r["id"], array(
