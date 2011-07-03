@@ -16,15 +16,21 @@ class DJBase {
       "mysql_pass" => null,
     );
     
+    // use either `configure` or `setConnection`, depending on if 
+    // you already have a PDO object you can re-use
     public static function configure($dsn, $options = array()) {
         self::$dsn = $dsn;
         self::$options = array_merge(self::$options, $options);
+    }
+
+    public static function setConnection(PDO $db) {
+        self::$db = $db;
     }
     
     protected static function getConnection() {
         if (self::$db === null) {
             if (!self::$dsn) {
-                throw new DJException("Please tell DJJob how to connect to your database by calling DJJob::configure(\$dsn, [\$options = array()]). If you're using MySQL you'll need to pass the db credentials as separate 'mysql_user' and 'mysql_pass' options. This is a PDO limitation, see [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] for an explanation.");
+                throw new DJException("Please tell DJJob how to connect to your database by calling DJJob::configure(\$dsn, [\$options = array()]) or re-using an existing PDO connection by calling DJJob::setConnection(\$pdoObject). If you're using MySQL you'll need to pass the db credentials as separate 'mysql_user' and 'mysql_pass' options. This is a PDO limitation, see [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] for an explanation.");
             }
             try {
                 // http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql
@@ -335,5 +341,5 @@ class DJJob extends DJBase {
             "total"  => $total
         );
     }
-    
+
 }
