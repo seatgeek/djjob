@@ -6,6 +6,10 @@ class DJException extends Exception { }
 
 class DJRetryException extends DJException { }
 
+interface DJTask {
+    public function perform();
+}
+
 class DJBase {
     
     private static $db = null;
@@ -18,7 +22,7 @@ class DJBase {
     
     // use either `configure` or `setConnection`, depending on if 
     // you already have a PDO object you can re-use
-    public static function configure($dsn, $options = array()) {
+    public static function configure($dsn, array $options = array()) {
         self::$dsn = $dsn;
         self::$options = array_merge(self::$options, $options);
     }
@@ -47,7 +51,7 @@ class DJBase {
         return self::$db;
     }
     
-    public static function runQuery($sql, $params = array()) {
+    public static function runQuery($sql, array $params = array()) {
         $stmt = self::getConnection()->prepare($sql);
         $stmt->execute($params);
         
@@ -62,7 +66,7 @@ class DJBase {
         return $ret;
     }
     
-    public static function runUpdate($sql, $params = array()) {
+    public static function runUpdate($sql, array $params = array()) {
         $stmt = self::getConnection()->prepare($sql);
         $stmt->execute($params);
         return $stmt->rowCount();
@@ -77,7 +81,7 @@ class DJWorker extends DJBase {
     # This is a singleton-ish thing. It wouldn't really make sense to
     # instantiate more than one in a single request (or commandline task)
     
-    public function __construct($options = array()) {
+    public function __construct(array $options = array()) {
         $options = array_merge(array(
             "queue" => "default",
             "count" => 0,
@@ -172,7 +176,7 @@ class DJWorker extends DJBase {
 
 class DJJob extends DJBase {
     
-    public function __construct($worker_name, $job_id, $options = array()) {
+    public function __construct($worker_name, $job_id, array $options = array()) {
         $options = array_merge(array(
             "max_attempts" => 5
         ), $options);
@@ -184,9 +188,9 @@ class DJJob extends DJBase {
     public function run() {
         # pull the handler from the db
         $handler = $this->getHandler();
-        if (!is_object($handler)) {
-            $this->log("* [JOB] bad handler for job::{$this->job_id}");
-            $this->finishWithError("bad handler for job::{$this->job_id}");
+        if (!($handler instanceof DJTask)) {
+            $this->log("* [JOB] bad handler for job::{$this->job_id}, must implement DJTask");
+            $this->finishWithError("bad handler for job::{$this->job_id}, must implement DJTask");
             return false;
         }
         
@@ -275,6 +279,9 @@ class DJJob extends DJBase {
         $this->releaseLock();
     }
     
+    /**
+     * @return DJTask
+     */
     public function getHandler() {
         $rs = $this->runQuery(
             "SELECT handler FROM jobs WHERE id = ?", 
@@ -284,7 +291,7 @@ class DJJob extends DJBase {
         return false;
     }
     
-    public static function enqueue($handler, $queue = "default", $run_at = null) {
+    public static function enqueue(DJTask $handler, $queue = "default", $run_at = null) {
         $affected = self::runUpdate(
             "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
             array(serialize($handler), (string) $queue, $run_at)
@@ -298,12 +305,18 @@ class DJJob extends DJBase {
         return true;
     }
     
-    public static function bulkEnqueue($handlers, $queue = "default", $run_at = null) {
+    public static function bulkEnqueue(array $handlers, $queue = "default", $run_at = null) {
         $sql = "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES";
         $sql .= implode(",", array_fill(0, count($handlers), "(?, ?, ?, NOW())"));
         
         $parameters = array();
         foreach ($handlers as $handler) {
+
+            if (!($handler instanceof DJTask)) {
+                $this->log("* [JOB] skipping enqueueing of bad handler; must implement DJTask");
+                continue;
+            }
+
             $parameters []= serialize($handler);
             $parameters []= (string) $queue;
             $parameters []= $run_at;
