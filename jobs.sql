@@ -1,3 +1,5 @@
+/* If you want to create a table using a different table name, replace `jobs` with your table name */
+
 CREATE TABLE `jobs` (
 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 `handler` TEXT NOT NULL,

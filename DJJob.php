@@ -14,17 +14,25 @@ class DJBase {
     private static $options = array(
       "mysql_user" => null,
       "mysql_pass" => null,
+      "mysql_jobs_table" => null,
     );
     
     // use either `configure` or `setConnection`, depending on if 
     // you already have a PDO object you can re-use
     public static function configure($dsn, $options = array()) {
+        if ($options["mysql_jobs_table"] == "") {
+            $options["mysql_jobs_table"] = "jobs";
+        }
         self::$dsn = $dsn;
         self::$options = array_merge(self::$options, $options);
     }
 
-    public static function setConnection(PDO $db) {
+    public static function setConnection(PDO $db, $options = array()) {
+        if ($options["mysql_jobs_table"] == "") {
+            $options["mysql_jobs_table"] = "jobs";
+        }
         self::$db = $db;
+        self::$options = array_merge(self::$options, $options);
     }
     
     protected static function getConnection() {
@@ -45,6 +53,10 @@ class DJBase {
             }
         }
         return self::$db;
+    }
+
+    public static function getJobsTableName() {
+      return self::$options["mysql_jobs_table"];
     }
     
     public static function runQuery($sql, $params = array()) {
@@ -67,6 +79,7 @@ class DJBase {
         $stmt->execute($params);
         return $stmt->rowCount();
     }
+
     
     protected static function log($mesg) {
         echo $mesg . "\n";
@@ -84,8 +97,9 @@ class DJWorker extends DJBase {
             "sleep" => 5,
             "max_attempts" => 5
         ), $options);
-        list($this->queue, $this->count, $this->sleep, $this->max_attempts) =
-            array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"]);
+        list($this->queue, $this->count, $this->sleep, $this->max_attempts, $this->jobs_table) =
+          array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"], 
+                self::getJobsTableName());
 
         list($hostname, $pid) = array(trim(`hostname`), getmypid());
         $this->name = "host::$hostname pid::$pid";
@@ -110,7 +124,7 @@ class DJWorker extends DJBase {
     
     public function releaseLocks() {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . $this->jobs_table . "
             SET locked_at = NULL, locked_by = NULL
             WHERE locked_by = ?",
             array($this->name)
@@ -121,7 +135,7 @@ class DJWorker extends DJBase {
         # we can grab a locked job if we own the lock
         $rs = $this->runQuery("
             SELECT id
-            FROM   jobs
+            FROM   " . $this->jobs_table . " 
             WHERE  queue = ?
             AND    (run_at IS NULL OR NOW() >= run_at)
             AND    (locked_at IS NULL OR locked_by = ?)
@@ -216,7 +230,7 @@ class DJJob extends DJBase {
         $this->log("* [JOB] attempting to acquire lock for job::{$this->job_id} on {$this->worker_name}");
         
         $lock = $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::getJobsTableName() . " 
             SET    locked_at = NOW(), locked_by = ?
             WHERE  id = ? AND (locked_at IS NULL OR locked_by = ?) AND failed_at IS NULL
         ", array($this->worker_name, $this->job_id, $this->worker_name));
@@ -231,7 +245,7 @@ class DJJob extends DJBase {
     
     public function releaseLock() {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::getJobsTableName() . " 
             SET locked_at = NULL, locked_by = NULL
             WHERE id = ?",
             array($this->job_id)
@@ -240,7 +254,7 @@ class DJJob extends DJBase {
     
     public function finish() {
         $this->runUpdate(
-            "DELETE FROM jobs WHERE id = ?", 
+            "DELETE FROM " . self::getJobsTableName() . " WHERE id = ?", 
             array($this->job_id)
         );
         $this->log("* [JOB] completed job::{$this->job_id}");
@@ -248,7 +262,7 @@ class DJJob extends DJBase {
     
     public function finishWithError($error) {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::getJobsTableName() . "
             SET attempts = attempts + 1,
                 failed_at = IF(attempts >= ?, NOW(), NULL),
                 error = IF(attempts >= ?, ?, NULL)
@@ -266,7 +280,7 @@ class DJJob extends DJBase {
     
     public function retryLater() {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::getJobsTableName() . "
             SET run_at = DATE_ADD(NOW(), INTERVAL 2 HOUR),
                 attempts = attempts + 1
             WHERE id = ?",
@@ -277,7 +291,7 @@ class DJJob extends DJBase {
     
     public function getHandler() {
         $rs = $this->runQuery(
-            "SELECT handler FROM jobs WHERE id = ?", 
+            "SELECT handler FROM " . self::getJobsTableName() . " WHERE id = ?", 
             array($this->job_id)
         );
         foreach ($rs as $r) return unserialize($r["handler"]);
@@ -286,7 +300,7 @@ class DJJob extends DJBase {
     
     public static function enqueue($handler, $queue = "default", $run_at = null) {
         $affected = self::runUpdate(
-            "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
+            "INSERT INTO " . self::getJobsTableName() . " (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
             array(serialize($handler), (string) $queue, $run_at)
         );
         
@@ -299,7 +313,7 @@ class DJJob extends DJBase {
     }
     
     public static function bulkEnqueue($handlers, $queue = "default", $run_at = null) {
-        $sql = "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES";
+        $sql = "INSERT INTO " . self::getJobsTableName() . " (handler, queue, run_at, created_at) VALUES";
         $sql .= implode(",", array_fill(0, count($handlers), "(?, ?, ?, NOW())"));
         
         $parameters = array();
@@ -324,7 +338,7 @@ class DJJob extends DJBase {
     public static function status($queue = "default") {
         $rs = self::runQuery("
             SELECT COUNT(*) as total, COUNT(failed_at) as failed, COUNT(locked_at) as locked
-            FROM `jobs`
+            FROM " . self::getJobsTableName() . "
             WHERE queue = ?
         ", array($queue));
         $rs = $rs[0];
