@@ -12,6 +12,8 @@ h2. Requirements
 
 h2. Setup
 
+p. For the setup we'll assume your table is named `jobs` although this is a configurable option.  If you do plan on using a different table name (eg. djjobs_jobs), make sure your SQL for CREATE TABLE reflects that.
+
 bc. mysql db < jobs.sql
 
 p. The @jobs@ table structure looks like:
@@ -35,6 +37,9 @@ bc. DJJob::configure("mysql:host=127.0.0.1;dbname=djjob_test;port=3306", "root",
 
 p. If you're using mysql, you'll need to pass the database credentials separately. Otherwise, you can provide those in the connection string, see "http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql":http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql for an explanation.
 
+p. This is the code for specifying a custom jobs table name.  If you omit this line, the default 'jobs' will be used.
+
+bc. DJJob::setJobsTableName('table_name');
 
 h2. Usage
 

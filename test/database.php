@@ -2,14 +2,17 @@
 
 require dirname(__FILE__) . "/../DJJob.php";
 
-DJJob::configure("mysql:host=127.0.0.1;dbname=djjob", array(
+$mysql_jobs_table = "jobs";
+
+DJJob::configure("mysql:host=localhost;dbname=djjob", array(
   "mysql_user" => "root",
   "mysql_pass" => "",
 ));
+DJJob::setJobsTableName($mysql_jobs_table);
 
 DJJob::runQuery("
-DROP TABLE IF EXISTS `jobs`;
-CREATE TABLE `jobs` (
+DROP TABLE IF EXISTS `" . $mysql_jobs_table . "`;
+CREATE TABLE `" . $mysql_jobs_table . "` (
 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 `handler` VARCHAR(255) NOT NULL,
 `queue` VARCHAR(255) NOT NULL DEFAULT 'default',
