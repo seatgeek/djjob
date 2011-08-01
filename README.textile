@@ -33,12 +33,13 @@ bc. CREATE TABLE `jobs` (
 
 p. Tell DJJob how to connect to your database:
 
-bc. DJJob::configure("mysql:host=127.0.0.1;dbname=djjob_test;port=3306", "root", "topsecret", "table_name");
+bc. DJJob::configure("mysql:host=127.0.0.1;dbname=djjob_test;port=3306", "root", "topsecret");
 
 p. If you're using mysql, you'll need to pass the database credentials separately. Otherwise, you can provide those in the connection string, see "http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql":http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql for an explanation.
 
-p. @table_name@ is an optional parameter in the event that you have created your table using a different name.
+p. This is the code for specifying a custom jobs table name.  If you omit this line, the default 'jobs' will be used.
 
+bc. DJJob::setJobsTableName('table_name');
 
 h2. Usage
 

@@ -14,25 +14,19 @@ class DJBase {
     private static $options = array(
       "mysql_user" => null,
       "mysql_pass" => null,
-      "mysql_jobs_table" => null,
     );
+    
+    private static $jobsTableName = 'jobs';
     
     // use either `configure` or `setConnection`, depending on if 
     // you already have a PDO object you can re-use
     public static function configure($dsn, $options = array()) {
-        if ($options["mysql_jobs_table"] == "") {
-            $options["mysql_jobs_table"] = "jobs";
-        }
         self::$dsn = $dsn;
         self::$options = array_merge(self::$options, $options);
     }
 
-    public static function setConnection(PDO $db, $options = array()) {
-        if ($options["mysql_jobs_table"] == "") {
-            $options["mysql_jobs_table"] = "jobs";
-        }
+    public static function setConnection(PDO $db) {
         self::$db = $db;
-        self::$options = array_merge(self::$options, $options);
     }
     
     protected static function getConnection() {
@@ -55,8 +49,12 @@ class DJBase {
         return self::$db;
     }
 
+    public static function setJobsTableName($jobsTableName) {
+      self::$jobsTableName = $jobsTableName;
+    }
+    
     public static function getJobsTableName() {
-      return self::$options["mysql_jobs_table"];
+      return self::$jobsTableName;
     }
     
     public static function runQuery($sql, $params = array()) {

@@ -7,8 +7,8 @@ $mysql_jobs_table = "jobs";
 DJJob::configure("mysql:host=localhost;dbname=djjob", array(
   "mysql_user" => "root",
   "mysql_pass" => "",
-  "mysql_jobs_table" => $mysql_jobs_table,
 ));
+DJJob::setJobsTableName($mysql_jobs_table);
 
 DJJob::runQuery("
 DROP TABLE IF EXISTS `" . $mysql_jobs_table . "`;
