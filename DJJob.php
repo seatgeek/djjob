@@ -16,7 +16,7 @@ class DJBase {
       "mysql_pass" => null,
     );
     
-    private static $jobsTableName = 'jobs';
+    protected static $jobsTableName = 'jobs';
     
     // use either `configure` or `setConnection`, depending on if 
     // you already have a PDO object you can re-use
