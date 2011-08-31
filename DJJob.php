@@ -139,9 +139,9 @@ class DJWorker extends DJBase {
         ", array($this->queue, $this->name, $this->max_attempts));
 
         // randomly order the 10 to prevent deadlock issues
-        $shuffled = shuffle($rs);
+        shuffle($rs);
 
-        foreach ($shuffled as $r) {
+        foreach ($rs as $r) {
             $job = new DJJob($this->name, $r["id"], array(
                 "max_attempts" => $this->max_attempts
             ));
