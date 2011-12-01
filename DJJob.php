@@ -83,7 +83,7 @@ class DJBase {
 
     protected static function log($mesg, $severity=self::CRITICAL) {
         if($severity >= self::$log_level) {
-            echo $mesg . "\n";
+            echo date('Y-m-d H:i:s') . " $mesg\n";
         }
     }
 }
@@ -118,7 +118,7 @@ class DJWorker extends DJBase {
         );
         $signal = $signals[$signo];
 
-        $this->log("* [WORKER] Received received {$signal}... Shutting down", self::INFO);
+        $this->log("[WORKER] Received received {$signal}... Shutting down", self::INFO);
         $this->releaseLocks();
         die(0);
     }
@@ -191,7 +191,7 @@ class DJWorker extends DJBase {
     }
 
     public function start() {
-        $this->log("* [JOB] Starting worker {$this->name} on queue::{$this->queue}", self::INFO);
+        $this->log("[JOB] Starting worker {$this->name} on queue::{$this->queue}", self::INFO);
 
         $count = 0;
         $job_count = 0;
@@ -203,7 +203,7 @@ class DJWorker extends DJBase {
                 $job = $this->getNewJobOrdered($this->queue);
 
                 if (!$job) {
-                    $this->log("* [JOB] Failed to get a job, queue::{$this->queue} may be empty", self::DEBUG);
+                    $this->log("[JOB] Failed to get a job, queue::{$this->queue} may be empty", self::DEBUG);
                     sleep($this->sleep);
                     continue;
                 }
@@ -212,10 +212,10 @@ class DJWorker extends DJBase {
                 $job->run();
             }
         } catch (Exception $e) {
-            $this->log("* [JOB] unhandled exception::\"{$e->getMessage()}\"", self::ERROR);
+            $this->log("[JOB] unhandled exception::\"{$e->getMessage()}\"", self::ERROR);
         }
 
-        $this->log("* [JOB] worker shutting down after running {$job_count} jobs, over {$count} polling iterations", self::INFO);
+        $this->log("[JOB] worker shutting down after running {$job_count} jobs, over {$count} polling iterations", self::INFO);
     }
 }
 
@@ -234,7 +234,7 @@ class DJJob extends DJBase {
         # pull the handler from the db
         $handler = $this->getHandler();
         if (!is_object($handler)) {
-            $this->log("* [JOB] bad handler for job::{$this->job_id}", self::ERROR);
+            $this->log("[JOB] bad handler for job::{$this->job_id}", self::ERROR);
             $this->finishWithError("bad handler for job::{$this->job_id}");
             return false;
         }
@@ -262,7 +262,7 @@ class DJJob extends DJBase {
     }
 
     public function acquireLock() {
-        $this->log("* [JOB] attempting to acquire lock for job::{$this->job_id} on {$this->worker_name}", self::INFO);
+        $this->log("[JOB] attempting to acquire lock for job::{$this->job_id} on {$this->worker_name}", self::INFO);
 
         $lock = $this->runUpdate("
             UPDATE jobs
@@ -271,7 +271,7 @@ class DJJob extends DJBase {
         ", array($this->worker_name, $this->job_id, $this->worker_name));
 
         if (!$lock) {
-            $this->log("* [JOB] failed to acquire lock for job::{$this->job_id}", self::INFO);
+            $this->log("[JOB] failed to acquire lock for job::{$this->job_id}", self::INFO);
             return false;
         }
 
@@ -292,7 +292,7 @@ class DJJob extends DJBase {
             "DELETE FROM jobs WHERE id = ?",
             array($this->job_id)
         );
-        $this->log("* [JOB] completed job::{$this->job_id}", self::INFO);
+        $this->log("[JOB] completed job::{$this->job_id}", self::INFO);
     }
 
     public function finishWithError($error) {
@@ -309,7 +309,7 @@ class DJJob extends DJBase {
                 $this->job_id
             )
         );
-        $this->log("* [JOB] failure in job::{$this->job_id}", self::ERROR);
+        $this->log("[JOB] failure in job::{$this->job_id}", self::ERROR);
         $this->releaseLock();
     }
 
@@ -340,7 +340,7 @@ class DJJob extends DJBase {
         );
 
         if ($affected < 1) {
-            self::log("* [JOB] failed to enqueue new job", self::ERROR);
+            self::log("[JOB] failed to enqueue new job", self::ERROR);
             return false;
         }
 
@@ -360,12 +360,12 @@ class DJJob extends DJBase {
         $affected = self::runUpdate($sql, $parameters);
 
         if ($affected < 1) {
-            self::log("* [JOB] failed to enqueue new jobs", self::ERROR);
+            self::log("[JOB] failed to enqueue new jobs", self::ERROR);
             return false;
         }
 
         if ($affected != count($handlers))
-            self::log("* [JOB] failed to enqueue some new jobs", self::ERROR);
+            self::log("[JOB] failed to enqueue some new jobs", self::ERROR);
 
         return true;
     }
