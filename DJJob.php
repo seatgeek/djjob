@@ -139,7 +139,7 @@ class DJWorker extends DJBase {
      *     run oldest first, all jobs get left behind
      * @return DJJob
      */
-    public function getNewJobOrdered() {
+    public function getNewJob() {
         # we can grab a locked job if we own the lock
         $rs = $this->runQuery("
             SELECT id
@@ -166,30 +166,6 @@ class DJWorker extends DJBase {
         return false;
     }
 
-    public function getNewJob() {
-        # we can grab a locked job if we own the lock
-        $rs = $this->runQuery("
-            SELECT id
-            FROM   jobs
-            WHERE  queue = ?
-            AND    (run_at IS NULL OR NOW() >= run_at)
-            AND    (locked_at IS NULL OR locked_by = ?)
-            AND    failed_at IS NULL
-            AND    attempts < ?
-            ORDER BY RAND()
-            LIMIT  5
-        ", array($this->queue, $this->name, $this->max_attempts));
-
-        foreach ($rs as $r) {
-            $job = new DJJob($this->name, $r["id"], array(
-                "max_attempts" => $this->max_attempts
-            ));
-            if ($job->acquireLock()) return $job;
-        }
-
-        return false;
-    }
-
     public function start() {
         $this->log("[JOB] Starting worker {$this->name} on queue::{$this->queue}", self::INFO);
 
@@ -200,7 +176,7 @@ class DJWorker extends DJBase {
                 if (function_exists("pcntl_signal_dispatch")) pcntl_signal_dispatch();
 
                 $count += 1;
-                $job = $this->getNewJobOrdered($this->queue);
+                $job = $this->getNewJob($this->queue);
 
                 if (!$job) {
                     $this->log("[JOB] Failed to get a job, queue::{$this->queue} may be empty", self::DEBUG);
