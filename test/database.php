@@ -51,7 +51,7 @@ DJJob::bulkEnqueue(array(
 ));
 DJJob::enqueue(new FailingJob());
 
-$worker = new DJWorker(array("count" => 2, "max_attempts" => 2, "sleep" => 10));
+$worker = new DJWorker(array("count" => 5, "max_attempts" => 2, "sleep" => 10));
 $worker->start();
 
 var_dump(DJJob::status());
