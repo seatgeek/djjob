@@ -4,7 +4,17 @@
 
 class DJException extends Exception { }
 
-class DJRetryException extends DJException { }
+class DJRetryException extends DJException {
+
+    private $delay_seconds = 7200;
+
+    public function setDelay($delay) {
+        $this->delay_seconds = $delay;
+    }
+    public function getDelay() {
+        return $this->delay_seconds;
+    }
+}
 
 class DJBase {
 
@@ -224,9 +234,18 @@ class DJJob extends DJBase {
             return true;
 
         } catch (DJRetryException $e) {
+            # attempts hasn't been incremented yet.
+            $attempts = $this->getAttempts()+1;
 
-            # signal that this job should be retried later
-            $this->retryLater();
+            $msg = "Caught DJRetryException \"{$e->getMessage()}\" on attempt $attempts/{$this->max_attempts}.";
+
+            if($attempts == $this->max_attempts) {
+                $this->log("[JOB] job::{$this->job_id} $msg Giving up.");
+                $this->finishWithError($msg);
+            } else {
+                $this->log("[JOB] job::{$this->job_id} $msg Try again in {$e->getDelay()} seconds.", self::WARN);
+                $this->retryLater($e->getDelay());
+            }
             return false;
 
         } catch (Exception $e) {
@@ -289,13 +308,16 @@ class DJJob extends DJBase {
         $this->releaseLock();
     }
 
-    public function retryLater() {
+    public function retryLater($delay) {
         $this->runUpdate("
             UPDATE jobs
-            SET run_at = DATE_ADD(NOW(), INTERVAL 2 HOUR),
+            SET run_at = DATE_ADD(NOW(), INTERVAL ? SECOND),
                 attempts = attempts + 1
             WHERE id = ?",
-            array($this->job_id)
+            array(
+              $delay,
+              $this->job_id
+            )
         );
         $this->releaseLock();
     }
@@ -306,6 +328,15 @@ class DJJob extends DJBase {
             array($this->job_id)
         );
         foreach ($rs as $r) return unserialize($r["handler"]);
+        return false;
+    }
+
+    public function getAttempts() {
+        $rs = $this->runQuery(
+            "SELECT attempts FROM jobs WHERE id = ?",
+            array($this->job_id)
+        );
+        foreach ($rs as $r) return $r["attempts"];
         return false;
     }
 
