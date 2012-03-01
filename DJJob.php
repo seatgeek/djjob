@@ -190,7 +190,10 @@ class DJWorker extends DJBase {
 
                 if (!$job) {
                     $this->log("[JOB] Failed to get a job, queue::{$this->queue} may be empty", self::DEBUG);
-                    sleep($this->sleep);
+                    // require for signal support in versions < 5.3
+                    declare(ticks=1) {
+                        sleep($this->sleep);
+                    }
                     continue;
                 }
 
