@@ -155,7 +155,7 @@ class DJWorker extends DJBase {
             SELECT id
             FROM   jobs
             WHERE  queue = ?
-            AND    (run_at IS NULL OR NOW() >= run_at)
+            AND    (run_at IS NULL OR UNIX_TIMESTAMP() >= run_at)
             AND    (locked_at IS NULL OR locked_by = ?)
             AND    failed_at IS NULL
             AND    attempts < ?
@@ -250,7 +250,7 @@ class DJJob extends DJBase {
 
         } catch (Exception $e) {
 
-            $this->finishWithError($e->getMessage());
+            $this->finishWithError($e->__toString());
             return false;
 
         }
@@ -261,7 +261,7 @@ class DJJob extends DJBase {
 
         $lock = $this->runUpdate("
             UPDATE jobs
-            SET    locked_at = NOW(), locked_by = ?
+            SET    locked_at = UNIX_TIMESTAMP(), locked_by = ?
             WHERE  id = ? AND (locked_at IS NULL OR locked_by = ?) AND failed_at IS NULL
         ", array($this->worker_name, $this->job_id, $this->worker_name));
 
@@ -294,7 +294,7 @@ class DJJob extends DJBase {
         $this->runUpdate("
             UPDATE jobs
             SET attempts = attempts + 1,
-                failed_at = IF(attempts >= ?, NOW(), NULL),
+                failed_at = IF(attempts >= ?, UNIX_TIMESTAMP(), NULL),
                 error = IF(attempts >= ?, ?, NULL)
             WHERE id = ?",
             array(
@@ -311,7 +311,7 @@ class DJJob extends DJBase {
     public function retryLater($delay) {
         $this->runUpdate("
             UPDATE jobs
-            SET run_at = DATE_ADD(NOW(), INTERVAL ? SECOND),
+            SET run_at = UNIX_TIMESTAMP() + ?,
                 attempts = attempts + 1
             WHERE id = ?",
             array(
@@ -342,7 +342,7 @@ class DJJob extends DJBase {
 
     public static function enqueue($handler, $queue = "default", $run_at = null) {
         $affected = self::runUpdate(
-            "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
+            "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES(?, ?, ?, UNIX_TIMESTAMP())",
             array(serialize($handler), (string) $queue, $run_at)
         );
 
@@ -356,7 +356,7 @@ class DJJob extends DJBase {
 
     public static function bulkEnqueue($handlers, $queue = "default", $run_at = null) {
         $sql = "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES";
-        $sql .= implode(",", array_fill(0, count($handlers), "(?, ?, ?, NOW())"));
+        $sql .= implode(",", array_fill(0, count($handlers), "(?, ?, ?, UNIX_TIMESTAMP())"));
 
         $parameters = array();
         foreach ($handlers as $handler) {
