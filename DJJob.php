@@ -163,7 +163,7 @@ class DJWorker extends DJBase {
             LIMIT  10
         ", array($this->queue, $this->name, $this->max_attempts));
 
-        // randomly order the 10 to prevent deadlock issues
+        // randomly order the 10 to prevent lock contention among workers
         shuffle($rs);
 
         foreach ($rs as $r) {
