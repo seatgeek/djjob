@@ -93,7 +93,7 @@ class DJBase {
 
     protected static function log($mesg, $severity=self::CRITICAL) {
         if ($severity >= self::$log_level) {
-            printf("[%s] %s\n", date('Y-m-d H:i:s'), $mesg);
+            printf("[%s] %s\n", date('c'), $mesg);
         }
     }
 }
