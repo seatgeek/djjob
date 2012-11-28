@@ -306,6 +306,11 @@ class DJJob extends DJBase {
         );
         $this->log("[JOB] failure in job::{$this->job_id}", self::ERROR);
         $this->releaseLock();
+        
+        $handler = $this->getHandler();
+        if(is_object($handler) && method_exists($handler, 'errorOnPerform')) {
+          $handler->errorOnPerform($error);
+        }
     }
 
     public function retryLater($delay) {
