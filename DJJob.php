@@ -241,7 +241,7 @@ class DJJob extends DJBase {
 
             if($attempts == $this->max_attempts) {
                 $this->log("[JOB] job::{$this->job_id} $msg Giving up.");
-                $this->finishWithError($msg);
+                $this->finishWithError($msg, $handler);
             } else {
                 $this->log("[JOB] job::{$this->job_id} $msg Try again in {$e->getDelay()} seconds.", self::WARN);
                 $this->retryLater($e->getDelay());
@@ -250,7 +250,7 @@ class DJJob extends DJBase {
 
         } catch (Exception $e) {
 
-            $this->finishWithError($e->getMessage());
+            $this->finishWithError($e->getMessage(), $handler);
             return false;
 
         }
@@ -290,7 +290,7 @@ class DJJob extends DJBase {
         $this->log("[JOB] completed job::{$this->job_id}", self::INFO);
     }
 
-    public function finishWithError($error) {
+    public function finishWithError($error, $handler = null) {
         $this->runUpdate("
             UPDATE jobs
             SET attempts = attempts + 1,
@@ -307,11 +307,8 @@ class DJJob extends DJBase {
         $this->log("[JOB] failure in job::{$this->job_id}", self::ERROR);
         $this->releaseLock();
         
-        if($this->getAttempts() == $this->max_attempts) {
-          $handler = $this->getHandler();
-          if(is_object($handler) && method_exists($handler, 'errorOnPerform')) {
-            $handler->errorOnPerform($error);
-          }
+        if ($handler && ($this->getAttempts() == $this->max_attempts) && method_exists($handler, 'errorOnPerform')) {
+          $handler->errorOnPerform($error);
         }
     }
 
