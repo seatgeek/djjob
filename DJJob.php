@@ -307,8 +307,8 @@ class DJJob extends DJBase {
         $this->log("[JOB] failure in job::{$this->job_id}", self::ERROR);
         $this->releaseLock();
         
-        if ($handler && ($this->getAttempts() == $this->max_attempts) && method_exists($handler, 'errorOnPerform')) {
-          $handler->errorOnPerform($error);
+        if ($handler && ($this->getAttempts() == $this->max_attempts) && method_exists($handler, '_onDjjobRetryError')) {
+          $handler->_onDjjobRetryError($error);
         }
     }
 
