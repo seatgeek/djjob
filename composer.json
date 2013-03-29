@@ -1,0 +1,12 @@
+{
+    "name": "seatgeek/djjob",
+    "type": "library",
+    "description": "Allows PHP web applications to process long-running tasks asynchronously",
+    "keywords": ["PHP","asynchronous", "task","job"],
+    "require": {
+        "php": ">=5.1.0"
+    },
+    "autoload": {
+        "psr-0": { "DJJob": "" }
+    }
+}
