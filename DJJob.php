@@ -31,8 +31,9 @@ class DJBase {
 
     private static $dsn = "";
     private static $options = array(
-      "mysql_user" => null,
-      "mysql_pass" => null,
+      "mysql_user"    => null,
+      "mysql_pass"    => null,
+      "mysql_retries" => 3
     );
 
     // use either `configure` or `setConnection`, depending on if
@@ -71,24 +72,60 @@ class DJBase {
     }
 
     public static function runQuery($sql, $params = array()) {
-        $stmt = self::getConnection()->prepare($sql);
-        $stmt->execute($params);
+        $retries = self::$options["mysql_retries"];
 
-        $ret = array();
-        if ($stmt->rowCount()) {
-            // calling fetchAll on a result set with no rows throws a
-            // "general error" exception
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) $ret []= $r;
+        for ($attempts = 0; $attempts < $retries; $attempts++) {
+            try {
+                $stmt = self::getConnection()->prepare($sql);
+                $stmt->execute($params);
+
+                $ret = array();
+                if ($stmt->rowCount()) {
+                    // calling fetchAll on a result set with no rows throws a
+                    // "general error" exception
+                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) $ret []= $r;
+                }
+
+                $stmt->closeCursor();
+                return $ret;
+            }
+            catch (PDOException $e) {
+                // Catch "MySQL server has gone away" error.
+                if ($e->errorInfo[1] == 2006) {
+                    self::$db = null;
+                }
+                // Throw all other errors as expected.
+                else {
+                    throw $e;
+                }
+            }
         }
 
-        $stmt->closeCursor();
-        return $ret;
+        throw new DJException("DJJob exhausted retries connecting to database");
     }
 
     public static function runUpdate($sql, $params = array()) {
-        $stmt = self::getConnection()->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->rowCount();
+        $retries = self::$options["mysql_retries"];
+
+        for ($attempts = 0; $attempts < $retries; $attempts++) {
+            try {
+                $stmt = self::getConnection()->prepare($sql);
+                $stmt->execute($params);
+                return $stmt->rowCount();
+            }
+            catch (PDOException $e) {
+                // Catch "MySQL server has gone away" error.
+                if ($e->errorInfo[1] == 2006) {
+                    self::$db = null;
+                }
+                // Throw all other errors as expected.
+                else {
+                    throw $e;
+                }
+            }
+        }
+
+        throw new DJException("DJJob exhausted retries connecting to database");
     }
 
     protected static function log($mesg, $severity=self::CRITICAL) {
