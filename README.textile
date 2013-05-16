@@ -31,9 +31,8 @@ bc. CREATE TABLE `jobs` (
 
 p. Tell DJJob how to connect to your database:
 
-bc. DJJob::configure("mysql:host=127.0.0.1;dbname=djjob_test;port=3306", array('mysql_user' => "root", 'mysql_pass' => "topsecret"));
-
-p. If you're using mysql, you'll need to pass the database credentials separately. Otherwise, you can provide those in the connection string, see "http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql":http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql for an explanation.
+bc. DJJob::configure(['driver'=> 'mysql','host'=> '127.0.0.1','dbname'=> 'djjob','user'=> 'root','password'=> 'topsecret',
+]);
 
 
 h2. Usage
@@ -117,5 +116,4 @@ p. The worker will exit if the database has any connectivity problems. We use "g
 
 h3. Changes
 
-* Change DJJob::configure to take an options array
 * Eliminated Propel dependency by switching to PDO

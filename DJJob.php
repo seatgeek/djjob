@@ -28,19 +28,43 @@ class DJBase {
     private static $log_level = self::DEBUG;
 
     private static $db = null;
+    protected static $jobsTable = "";
 
     private static $dsn = "";
-    private static $options = array(
-      "mysql_user"    => null,
-      "mysql_pass"    => null,
-      "mysql_retries" => 3
-    );
+    private static $user = "";
+    private static $password = "";
+    private static $retries = 3; //default retries
 
     // use either `configure` or `setConnection`, depending on if
     // you already have a PDO object you can re-use
-    public static function configure($dsn, $options = array()) {
-        self::$dsn = $dsn;
-        self::$options = array_merge(self::$options, $options);
+    public static function configure(array $options, $jobsTable = 'jobs') {
+        self::$jobsTable = $jobsTable;
+
+        if(!isset($options['driver']))
+            throw new DJException("Please provide the database driver used in configure options array.");
+        if(!isset($options['user']))
+            throw new DJException("Please provide the database user in configure options array.");
+        if(!isset($options['password']))
+            throw new DJException("Please provide the database password in configure options array.");
+
+        self::$user = $options['user'];
+        self::$password = $options['password'];
+
+        self::$dsn = $options['driver'] . ':';
+        foreach ($options as $key => $value) {
+            // skips options already used
+            if($key == 'driver' || $key == 'user' || $key == 'password') continue;
+
+            self::$dsn .= $key . '=' . $value . ';';
+
+            if($key == 'mysql_retries'){
+                self::$retries = (int) $value;
+            }
+        }
+
+        if(!isset($dsn['mysql_retries'])){
+            self::$dsn .= 'mysql_retries=' . self::$retries . ';';
+        }
     }
 
     public static function setLogLevel($const) {
@@ -53,16 +77,8 @@ class DJBase {
 
     protected static function getConnection() {
         if (self::$db === null) {
-            if (!self::$dsn) {
-                throw new DJException("Please tell DJJob how to connect to your database by calling DJJob::configure(\$dsn, [\$options = array()]) or re-using an existing PDO connection by calling DJJob::setConnection(\$pdoObject). If you're using MySQL you'll need to pass the db credentials as separate 'mysql_user' and 'mysql_pass' options. This is a PDO limitation, see [http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql] for an explanation.");
-            }
             try {
-                // http://stackoverflow.com/questions/237367/why-is-php-pdo-dsn-a-different-format-for-mysql-versus-postgresql
-                if (self::$options["mysql_user"] !== null) {
-                    self::$db = new PDO(self::$dsn, self::$options["mysql_user"], self::$options["mysql_pass"]);
-                } else {
-                    self::$db = new PDO(self::$dsn);
-                }
+                self::$db = new PDO(self::$dsn, self::$user, self::$password);
                 self::$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             } catch (PDOException $e) {
                 throw new Exception("DJJob couldn't connect to the database. PDO said [{$e->getMessage()}]");
@@ -72,9 +88,7 @@ class DJBase {
     }
 
     public static function runQuery($sql, $params = array()) {
-        $retries = self::$options["mysql_retries"];
-
-        for ($attempts = 0; $attempts < $retries; $attempts++) {
+        for ($attempts = 0; $attempts < self::$retries; $attempts++) {
             try {
                 $stmt = self::getConnection()->prepare($sql);
                 $stmt->execute($params);
@@ -105,9 +119,7 @@ class DJBase {
     }
 
     public static function runUpdate($sql, $params = array()) {
-        $retries = self::$options["mysql_retries"];
-
-        for ($attempts = 0; $attempts < $retries; $attempts++) {
+        for ($attempts = 0; $attempts < self::$retries; $attempts++) {
             try {
                 $stmt = self::getConnection()->prepare($sql);
                 $stmt->execute($params);
@@ -172,7 +184,7 @@ class DJWorker extends DJBase {
 
     public function releaseLocks() {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::$jobsTable . "
             SET locked_at = NULL, locked_by = NULL
             WHERE locked_by = ?",
             array($this->name)
@@ -190,7 +202,7 @@ class DJWorker extends DJBase {
         # we can grab a locked job if we own the lock
         $rs = $this->runQuery("
             SELECT id
-            FROM   jobs
+            FROM   " . self::$jobsTable . "
             WHERE  queue = ?
             AND    (run_at IS NULL OR NOW() >= run_at)
             AND    (locked_at IS NULL OR locked_by = ?)
@@ -297,7 +309,7 @@ class DJJob extends DJBase {
         $this->log("[JOB] attempting to acquire lock for job::{$this->job_id} on {$this->worker_name}", self::INFO);
 
         $lock = $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::$jobsTable . "
             SET    locked_at = NOW(), locked_by = ?
             WHERE  id = ? AND (locked_at IS NULL OR locked_by = ?) AND failed_at IS NULL
         ", array($this->worker_name, $this->job_id, $this->worker_name));
@@ -312,7 +324,7 @@ class DJJob extends DJBase {
 
     public function releaseLock() {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::$jobsTable . "
             SET locked_at = NULL, locked_by = NULL
             WHERE id = ?",
             array($this->job_id)
@@ -321,7 +333,7 @@ class DJJob extends DJBase {
 
     public function finish() {
         $this->runUpdate(
-            "DELETE FROM jobs WHERE id = ?",
+            "DELETE FROM " . self::$jobsTable . " WHERE id = ?",
             array($this->job_id)
         );
         $this->log("[JOB] completed job::{$this->job_id}", self::INFO);
@@ -329,7 +341,7 @@ class DJJob extends DJBase {
 
     public function finishWithError($error, $handler = null) {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::$jobsTable . "
             SET attempts = attempts + 1,
                 failed_at = IF(attempts >= ?, NOW(), NULL),
                 error = IF(attempts >= ?, ?, NULL)
@@ -343,7 +355,7 @@ class DJJob extends DJBase {
         );
         $this->log("[JOB] failure in job::{$this->job_id}", self::ERROR);
         $this->releaseLock();
-        
+
         if ($handler && ($this->getAttempts() == $this->max_attempts) && method_exists($handler, '_onDjjobRetryError')) {
           $handler->_onDjjobRetryError($error);
         }
@@ -351,7 +363,7 @@ class DJJob extends DJBase {
 
     public function retryLater($delay) {
         $this->runUpdate("
-            UPDATE jobs
+            UPDATE " . self::$jobsTable . "
             SET run_at = DATE_ADD(NOW(), INTERVAL ? SECOND),
                 attempts = attempts + 1
             WHERE id = ?",
@@ -365,7 +377,7 @@ class DJJob extends DJBase {
 
     public function getHandler() {
         $rs = $this->runQuery(
-            "SELECT handler FROM jobs WHERE id = ?",
+            "SELECT handler FROM " . self::$jobsTable . " WHERE id = ?",
             array($this->job_id)
         );
         foreach ($rs as $r) return unserialize($r["handler"]);
@@ -374,7 +386,7 @@ class DJJob extends DJBase {
 
     public function getAttempts() {
         $rs = $this->runQuery(
-            "SELECT attempts FROM jobs WHERE id = ?",
+            "SELECT attempts FROM " . self::$jobsTable . " WHERE id = ?",
             array($this->job_id)
         );
         foreach ($rs as $r) return $r["attempts"];
@@ -383,7 +395,7 @@ class DJJob extends DJBase {
 
     public static function enqueue($handler, $queue = "default", $run_at = null) {
         $affected = self::runUpdate(
-            "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
+            "INSERT INTO " . self::$jobsTable . " (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
             array(serialize($handler), (string) $queue, $run_at)
         );
 
@@ -396,7 +408,7 @@ class DJJob extends DJBase {
     }
 
     public static function bulkEnqueue($handlers, $queue = "default", $run_at = null) {
-        $sql = "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES";
+        $sql = "INSERT INTO " . self::$jobsTable . " (handler, queue, run_at, created_at) VALUES";
         $sql .= implode(",", array_fill(0, count($handlers), "(?, ?, ?, NOW())"));
 
         $parameters = array();
@@ -421,7 +433,7 @@ class DJJob extends DJBase {
     public static function status($queue = "default") {
         $rs = self::runQuery("
             SELECT COUNT(*) as total, COUNT(failed_at) as failed, COUNT(locked_at) as locked
-            FROM `jobs`
+            FROM `" . self::$jobsTable . "`
             WHERE queue = ?
         ", array($queue));
         $rs = $rs[0];

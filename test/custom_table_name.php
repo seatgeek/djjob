@@ -19,11 +19,11 @@ DJJob::configure([
     'dbname'   => 'djjob',
     'user'     => 'root',
     'password' => 'root',
-]);
+], 'my_jobs');
 
 DJJob::runQuery("
-DROP TABLE IF EXISTS `jobs`;
-CREATE TABLE `jobs` (
+DROP TABLE IF EXISTS `my_jobs`;
+CREATE TABLE `my_jobs` (
 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 `handler` VARCHAR(255) NOT NULL,
 `queue` VARCHAR(255) NOT NULL DEFAULT 'default',
