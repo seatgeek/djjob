@@ -37,33 +37,85 @@ class DJBase {
 
     // use either `configure` or `setConnection`, depending on if
     // you already have a PDO object you can re-use
-    public static function configure(array $options, $jobsTable = 'jobs') {
+
+    public static function configure(){
+        $args = func_get_args();
+        $numArgs = func_num_args();
+
+        switch ($numArgs) {
+            case 1:{
+                if (is_array($args[0])){
+                    self::configureWithOptions($args[0]);
+                } else {
+                    self::configureWithDsnAndOptions($args[0]);
+                }
+                break;
+            }
+            case 2:{
+                if (is_array($args[0])){
+                    self::configureWithOptions($args[0], $args[1]);
+                } else {
+                    self::configureWithDsnAndOptions($args[0], $args[1]);
+                }
+                break;
+            }
+            case 3: {
+                self::configureWithDsnAndOptions($args[0], $args[1], $args[2]);
+                break;
+            }
+        }
+    }
+
+    protected static function configureWithDsnAndOptions($dsn, array $options = array(), $jobsTable = 'jobs') {
+        if (!isset($options['mysql_user'])){
+            throw new DJException("Please provide the database user in configure options array.");
+        }
+        if (!isset($options['mysql_pass'])){
+            throw new DJException("Please provide the database password in configure options array.");
+        }
+
+        self::$dsn = $dsn;
         self::$jobsTable = $jobsTable;
 
-        if(!isset($options['driver']))
+        self::$user = $options['mysql_user'];
+        self::$password = $options['mysql_pass'];
+
+        // searches for retries
+        if (isset($options['retries'])){
+            self::$retries = (int) $value;
+        }
+    }
+
+    protected static function configureWithOptions(array $options, $jobsTable = 'jobs') {
+
+        if (!isset($options['driver'])){
             throw new DJException("Please provide the database driver used in configure options array.");
-        if(!isset($options['user']))
+        }
+        if (!isset($options['user'])){
             throw new DJException("Please provide the database user in configure options array.");
-        if(!isset($options['password']))
+        }
+        if (!isset($options['password'])){
             throw new DJException("Please provide the database password in configure options array.");
+        }
 
         self::$user = $options['user'];
         self::$password = $options['password'];
+        self::$jobsTable = $jobsTable;
 
         self::$dsn = $options['driver'] . ':';
         foreach ($options as $key => $value) {
             // skips options already used
-            if($key == 'driver' || $key == 'user' || $key == 'password') continue;
+            if ($key == 'driver' || $key == 'user' || $key == 'password') {
+                continue;
+            }
+
+            // searches for retries
+            if ($key == 'retries'){
+                self::$retries = (int) $value;
+                continue;
+            }
 
             self::$dsn .= $key . '=' . $value . ';';
-
-            if($key == 'mysql_retries'){
-                self::$retries = (int) $value;
-            }
-        }
-
-        if(!isset($dsn['mysql_retries'])){
-            self::$dsn .= 'mysql_retries=' . self::$retries . ';';
         }
     }
 
