@@ -343,7 +343,7 @@ class DJJob extends DJBase {
         );
         $this->log("[JOB] failure in job::{$this->job_id}", self::ERROR);
         $this->releaseLock();
-        
+
         if ($handler && ($this->getAttempts() == $this->max_attempts) && method_exists($handler, '_onDjjobRetryError')) {
           $handler->_onDjjobRetryError($error);
         }
@@ -392,7 +392,7 @@ class DJJob extends DJBase {
             return false;
         }
 
-        return true;
+        return self::getConnection()->lastInsertId(); // return the job ID, for manipulation later
     }
 
     public static function bulkEnqueue($handlers, $queue = "default", $run_at = null) {
