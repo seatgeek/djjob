@@ -362,13 +362,22 @@ class DJJob extends DJBase {
         );
         $this->releaseLock();
     }
+        
+    protected static function serialize($object) {
+      return base64_encode(serialize($object));
+    }
+
+    protected static function unserialize($data) {
+      return unserialize(base64_decode($data));
+    }
+
 
     public function getHandler() {
         $rs = $this->runQuery(
             "SELECT handler FROM jobs WHERE id = ?",
             array($this->job_id)
         );
-        foreach ($rs as $r) return unserialize($r["handler"]);
+        foreach ($rs as $r) return self::unserialize($r["handler"]);
         return false;
     }
 
@@ -384,7 +393,7 @@ class DJJob extends DJBase {
     public static function enqueue($handler, $queue = "default", $run_at = null) {
         $affected = self::runUpdate(
             "INSERT INTO jobs (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
-            array(serialize($handler), (string) $queue, $run_at)
+            array(self::serialize($handler), (string) $queue, $run_at)
         );
 
         if ($affected < 1) {
@@ -401,7 +410,7 @@ class DJJob extends DJBase {
 
         $parameters = array();
         foreach ($handlers as $handler) {
-            $parameters []= serialize($handler);
+            $parameters []= self::serialize($handler);
             $parameters []= (string) $queue;
             $parameters []= $run_at;
         }
