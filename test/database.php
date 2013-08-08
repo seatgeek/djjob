@@ -66,6 +66,8 @@ DJJob::bulkEnqueue(array(
     new HelloWorldJob("github"),
 ));
 DJJob::enqueue(new FailingJob());
+// Test unicode support using the classic, rails snowman: http://www.fileformat.info/info/unicode/char/2603/browsertest.htm
+DJJob::enqueue(new HelloWorldJob(html_entity_decode("&#9731;", ENT_HTML5, "UTF-8")));
 
 $worker = new DJWorker(array("count" => 5, "max_attempts" => 2, "sleep" => 10));
 $worker->start();
