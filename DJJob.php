@@ -257,7 +257,7 @@ class DJJob extends DJBase {
         # pull the handler from the db
         $handler = $this->getHandler();
         if (!is_object($handler)) {
-            $this->log("[JOB] bad handler for job::{$this->job_id}", self::ERROR);
+            $msg = "[JOB] bad handler for job::{$this->job_id}";
             $this->finishWithError("bad handler for job::{$this->job_id}");
             return false;
         }
@@ -277,7 +277,7 @@ class DJJob extends DJBase {
             $msg = "Caught DJRetryException \"{$e->getMessage()}\" on attempt $attempts/{$this->max_attempts}.";
 
             if($attempts == $this->max_attempts) {
-                $this->log("[JOB] job::{$this->job_id} $msg Giving up.");
+                $msg = "[JOB] job::{$this->job_id} $msg Giving up.";
                 $this->finishWithError($msg, $handler);
             } else {
                 $this->log("[JOB] job::{$this->job_id} $msg Try again in {$e->getDelay()} seconds.", self::WARN);
@@ -341,6 +341,7 @@ class DJJob extends DJBase {
                 $this->job_id
             )
         );
+        $this->log($error, self::ERROR);
         $this->log("[JOB] failure in job::{$this->job_id}", self::ERROR);
         $this->releaseLock();
 
