@@ -258,7 +258,7 @@ class DJJob extends DJBase {
         $handler = $this->getHandler();
         if (!is_object($handler)) {
             $msg = "[JOB] bad handler for job::{$this->job_id}";
-            $this->finishWithError("bad handler for job::{$this->job_id}");
+            $this->finishWithError($msg);
             return false;
         }
 
