@@ -19,11 +19,11 @@ DJJob::configure([
     'dbname'   => 'djjob',
     'user'     => 'root',
     'password' => 'root',
-]);
+], 'my_jobs');
 
 DJJob::runQuery("
-DROP TABLE IF EXISTS `jobs`;
-CREATE TABLE `jobs` (
+DROP TABLE IF EXISTS `my_jobs`;
+CREATE TABLE `my_jobs` (
 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 `handler` VARCHAR(255) NOT NULL,
 `queue` VARCHAR(255) NOT NULL DEFAULT 'default',
@@ -69,8 +69,6 @@ DJJob::bulkEnqueue(array(
     new HelloWorldJob("github"),
 ));
 DJJob::enqueue(new FailingJob());
-// Test unicode support using the classic, rails snowman: http://www.fileformat.info/info/unicode/char/2603/browsertest.htm
-DJJob::enqueue(new HelloWorldJob(html_entity_decode("&#9731;", ENT_HTML5, "UTF-8")));
 
 $worker = new DJWorker(array("count" => 5, "max_attempts" => 2, "sleep" => 10));
 $worker->start();

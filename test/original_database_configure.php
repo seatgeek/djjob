@@ -13,13 +13,10 @@ date_default_timezone_set('America/New_York');
 
 require dirname(__FILE__) . "/../DJJob.php";
 
-DJJob::configure([
-    'driver'   => 'mysql',
-    'host'     => '127.0.0.1',
-    'dbname'   => 'djjob',
-    'user'     => 'root',
-    'password' => 'root',
-]);
+DJJob::configure("mysql:host=127.0.0.1;dbname=djjob;", array(
+  "mysql_user" => "root",
+  "mysql_pass" => "root",
+));
 
 DJJob::runQuery("
 DROP TABLE IF EXISTS `jobs`;
@@ -69,8 +66,6 @@ DJJob::bulkEnqueue(array(
     new HelloWorldJob("github"),
 ));
 DJJob::enqueue(new FailingJob());
-// Test unicode support using the classic, rails snowman: http://www.fileformat.info/info/unicode/char/2603/browsertest.htm
-DJJob::enqueue(new HelloWorldJob(html_entity_decode("&#9731;", ENT_HTML5, "UTF-8")));
 
 $worker = new DJWorker(array("count" => 5, "max_attempts" => 2, "sleep" => 10));
 $worker->start();
