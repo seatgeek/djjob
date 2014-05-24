@@ -82,7 +82,7 @@ class DJBase {
 
         // searches for retries
         if (isset($options['retries'])){
-            self::$retries = (int) $value;
+            self::$retries = (int) $options['retries'];
         }
     }
 
