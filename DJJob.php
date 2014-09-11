@@ -333,17 +333,17 @@ class DJJob extends DJBase {
         # run the handler
         try {
 
-            if($this->fail_on_output){
+            if ($this->fail_on_output) {
                 ob_start();                
             }
 
             $handler->perform();
 
-            if($this->fail_on_output){
+            if ($this->fail_on_output) {
                 $output = ob_get_contents();
                 ob_end_clean();
 
-                if(!empty($output)){
+                if (!empty($output)) {
                     throw new Exception("Job produced unexpected output: $output");
                 }
             }
