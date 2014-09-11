@@ -208,10 +208,11 @@ class DJWorker extends DJBase {
             "queue" => "default",
             "count" => 0,
             "sleep" => 5,
-            "max_attempts" => 5
+            "max_attempts" => 5,
+            "fail_on_output" => false
         ), $options);
-        list($this->queue, $this->count, $this->sleep, $this->max_attempts) =
-            array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"]);
+        list($this->queue, $this->count, $this->sleep, $this->max_attempts, $this->fail_on_output) =
+            array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"], $options["fail_on_output"]);
 
         list($hostname, $pid) = array(trim(`hostname`), getmypid());
         $this->name = "host::$hostname pid::$pid";
@@ -269,7 +270,8 @@ class DJWorker extends DJBase {
 
         foreach ($rs as $r) {
             $job = new DJJob($this->name, $r["id"], array(
-                "max_attempts" => $this->max_attempts
+                "max_attempts" => $this->max_attempts,
+                "fail_on_output" => $this->fail_on_output
             ));
             if ($job->acquireLock()) return $job;
         }
@@ -310,11 +312,13 @@ class DJJob extends DJBase {
 
     public function __construct($worker_name, $job_id, $options = array()) {
         $options = array_merge(array(
-            "max_attempts" => 5
+            "max_attempts" => 5,
+            "fail_on_output" => false
         ), $options);
         $this->worker_name = $worker_name;
         $this->job_id = $job_id;
         $this->max_attempts = $options["max_attempts"];
+        $this->fail_on_output = $options["fail_on_output"];
     }
 
     public function run() {
@@ -328,7 +332,21 @@ class DJJob extends DJBase {
 
         # run the handler
         try {
+
+            if ($this->fail_on_output) {
+                ob_start();                
+            }
+
             $handler->perform();
+
+            if ($this->fail_on_output) {
+                $output = ob_get_contents();
+                ob_end_clean();
+
+                if (!empty($output)) {
+                    throw new Exception("Job produced unexpected output: $output");
+                }
+            }
 
             # cleanup
             $this->finish();
