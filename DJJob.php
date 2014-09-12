@@ -209,11 +209,10 @@ class DJWorker extends DJBase {
             "count" => 0,
             "sleep" => 5,
             "max_attempts" => 5,
-            "fail_on_output" => false,
-            "job_class_name" => "DJJob"
+            "fail_on_output" => false
         ), $options);
-        list($this->queue, $this->count, $this->sleep, $this->max_attempts, $this->fail_on_output, $this->job_class_name) =
-            array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"], $options["fail_on_output"], $options["job_class_name"]);
+        list($this->queue, $this->count, $this->sleep, $this->max_attempts, $this->fail_on_output) =
+            array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"], $options["fail_on_output"]);
 
         list($hostname, $pid) = array(trim(`hostname`), getmypid());
         $this->name = "host::$hostname pid::$pid";
@@ -270,7 +269,7 @@ class DJWorker extends DJBase {
         shuffle($rs);
 
         foreach ($rs as $r) {
-            $job = new $this->job_class_name($this->name, $r["id"], array(
+            $job = new DJJob($this->name, $r["id"], array(
                 "max_attempts" => $this->max_attempts,
                 "fail_on_output" => $this->fail_on_output
             ));
