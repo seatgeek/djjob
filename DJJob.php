@@ -353,6 +353,10 @@ class DJJob extends DJBase {
             return true;
 
         } catch (DJRetryException $e) {
+            if ($this->fail_on_output) {
+                ob_end_flush();
+            }
+            
             # attempts hasn't been incremented yet.
             $attempts = $this->getAttempts()+1;
 
@@ -368,6 +372,9 @@ class DJJob extends DJBase {
             return false;
 
         } catch (Exception $e) {
+            if ($this->fail_on_output) {
+                ob_end_flush();
+            }
 
             $this->finishWithError($e->getMessage(), $handler);
             return false;
