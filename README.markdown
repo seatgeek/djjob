@@ -38,7 +38,7 @@ CREATE TABLE `jobs` (
 ) ENGINE = INNODB;
 ```
 
-> You may need to use BLOB as the column type for `handler` if you are passing in serialized blobs of data instead of record ids. For more information, see [this link](https://php.net/manual/en/function.serialize.php#refsect1-function.serialize-returnvalues) This may be the case for errors such as the following: @unserialize(): Error at offset 2010 of 2425 bytes@
+> You may need to use BLOB as the column type for `handler` if you are passing in serialized blobs of data instead of record ids. For more information, see [this link](https://php.net/manual/en/function.serialize.php#refsect1-function.serialize-returnvalues) This may be the case for errors such as the following: `unserialize(): Error at offset 2010 of 2425 bytes`
 
 Tell DJJob how to connect to your database:
 
@@ -56,7 +56,7 @@ DJJob::configure([
 Usage
 -----
 
-Jobs are PHP objects that respond to a method @perform@. Jobs are serialized and stored in the database.
+Jobs are PHP objects that respond to a method `perform`. Jobs are serialized and stored in the database.
 
 ```php
 <?php
