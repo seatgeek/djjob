@@ -29,6 +29,8 @@ bc. CREATE TABLE `jobs` (
 `created_at` DATETIME NOT NULL
 ) ENGINE = INNODB;
 
+You may need to use BLOB as the column type for @handler@ if storing a "lot of data":https://php.net/manual/en/function.serialize.php#refsect1-function.serialize-returnvalues and having issues like @unserialize(): Error at offset 2010 of 2425 bytes@
+
 p. Tell DJJob how to connect to your database:
 
 bc. DJJob::configure(['driver'=> 'mysql','host'=> '127.0.0.1','dbname'=> 'djjob','user'=> 'root','password'=> 'topsecret',
