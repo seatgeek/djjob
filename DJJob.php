@@ -214,7 +214,7 @@ class DJWorker extends DJBase {
         list($this->queue, $this->count, $this->sleep, $this->max_attempts, $this->fail_on_output) =
             array($options["queue"], $options["count"], $options["sleep"], $options["max_attempts"], $options["fail_on_output"]);
 
-        list($hostname, $pid) = array(trim(`hostname`), getmypid());
+        list($hostname, $pid) = array(trim(gethostname()), getmypid());
         $this->name = "host::$hostname pid::$pid";
 
         if (function_exists("pcntl_signal")) {
