@@ -16,6 +16,16 @@ class DJRetryException extends DJException {
     }
 }
 
+/**
+ * Job handler interface which can be safely enqueued.
+ */
+interface DJJobHandlerInterface {
+    /**
+     * Method that will perform the job when retrieved from the jobs table.
+     */
+    public function perform();
+}
+
 class DJBase {
 
     // error severity levels
