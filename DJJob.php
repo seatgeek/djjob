@@ -672,6 +672,19 @@ class DJJob extends DJBase {
     }
 
     /**
+     * Enqueues a job delayed to the database.
+     *
+     * @param object $handler The handler that can execute this job.
+     * @param string $queue The queue to enqueue this job to. All queues are saved in the same table.
+     * @param int    $delay The amount of seconds to delay this job.
+     */
+    public static function enqueueDelayed($handler, $queue = "default", $delay = 0) {
+        $runAt = self::runQuery("SELECT DATE_ADD(NOW(), INTERVAL ? SECOND) as `delayed`", array($delay));
+
+        return self::enqueue($handler, $queue, $runAt[0]['delayed']);
+    }
+
+    /**
      * Bulk enqueues a lot of jobs to the database.
      *
      * @param object[] $handlers An array of handlers to enqueue.
