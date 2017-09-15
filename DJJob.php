@@ -671,6 +671,27 @@ class DJJob extends DJBase {
         return self::getConnection()->lastInsertId(); // return the job ID, for manipulation later
     }
 
+    /*
+     * Enqueues a job delayed to the database.
+     *
+     * @param object $handler The handler that can execute this job.
+     * @param string $queue The queue to enqueue this job to. All queues are saved in the same table.
+     * @param int    $delay The amount of seconds to delay this job.
+     */
+    public static function enqueueDelayed($handler, $queue = "default", $delay = 0) {
+        $affected = self::runUpdate(
+            "INSERT INTO " . self::$jobsTable . " (handler, queue, run_at, created_at) VALUES(?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND), NOW())",
+            array(serialize($handler), (string) $queue, $delay)
+        );
+
+        if ($affected < 1) {
+            self::log("[JOB] failed to enqueue new job", self::ERROR);
+            return false;
+        }
+
+        return self::getConnection()->lastInsertId(); // return the job ID, for manipulation later
+    }
+
     /**
      * Bulk enqueues a lot of jobs to the database.
      *
