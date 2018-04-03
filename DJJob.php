@@ -630,7 +630,7 @@ class DJJob extends DJBase {
             "SELECT handler FROM " . self::$jobsTable . " WHERE id = ?",
             array($this->job_id)
         );
-        foreach ($rs as $r) return unserialize($r["handler"]);
+        foreach ($rs as $r) return unserialize(base64_decode($r["handler"]));
         return false;
     }
 
@@ -660,7 +660,7 @@ class DJJob extends DJBase {
     public static function enqueue($handler, $queue = "default", $run_at = null) {
         $affected = self::runUpdate(
             "INSERT INTO " . self::$jobsTable . " (handler, queue, run_at, created_at) VALUES(?, ?, ?, NOW())",
-            array(serialize($handler), (string) $queue, $run_at)
+            array(base64_encode(serialize($handler)), (string) $queue, $run_at)
         );
 
         if ($affected < 1) {
@@ -685,8 +685,8 @@ class DJJob extends DJBase {
         $sql .= implode(",", array_fill(0, count($handlers), "(?, ?, ?, NOW())"));
 
         $parameters = array();
-        foreach ($handlers as $handler) {
-            $parameters []= serialize($handler);
+        foreach ($handlers as $handler) 
+            $parameters []=  base64_encode(serialize($handler));
             $parameters []= (string) $queue;
             $parameters []= $run_at;
         }
