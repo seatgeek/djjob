@@ -685,7 +685,7 @@ class DJJob extends DJBase {
         $sql .= implode(",", array_fill(0, count($handlers), "(?, ?, ?, NOW())"));
 
         $parameters = array();
-        foreach ($handlers as $handler) 
+        foreach ($handlers as $handler) {
             $parameters []=  base64_encode(serialize($handler));
             $parameters []= (string) $queue;
             $parameters []= $run_at;
